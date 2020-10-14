@@ -64,6 +64,7 @@ dump_file_as_c_array_gen = generator(dump_file_as_c_array,
     capture : true,
 )
 
+libcap_dep = dependency('libcap', kwargs : static_kwargs)
 dl_dep = cpp.find_library('dl', kwargs : static_kwargs)
 libseccomp_dep = dependency('libseccomp', kwargs : static_kwargs)
 libzip_dep = dependency('libzip', version : '>=1.3.0', kwargs : static_kwargs)
@@ -78,6 +79,7 @@ if get_option('static')
 endif
 
 simlib_dependencies = [
+    libcap_dep,
     dl_dep,
     libseccomp_dep,
     libzip_dep,
@@ -107,6 +109,8 @@ simlib_libsources = files([
     'src/random.cc',
     'src/sandbox.cc',
     'src/sandbox2.cc',
+    'src/sandbox2_supervisor.cc',
+    'src/sandbox2_tracee.cc',
     'src/sha.cc',
     'src/sim/checker.cc',
     'src/sim/compile.cc',
