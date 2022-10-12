@@ -53,9 +53,9 @@ future execute(const Options& options) {
 
     int child_pidfd{};
     clone_args cl_args = {
-        .flags = CLONE_PIDFD,
-        .pidfd = reinterpret_cast<uintptr_t>(&child_pidfd),
-        .exit_signal = SIGCHLD,
+            .flags = CLONE_PIDFD,
+            .pidfd = reinterpret_cast<uintptr_t>(&child_pidfd),
+            .exit_signal = SIGCHLD,
     };
     auto parent_pid = getpid();
     auto pid = syscalls::clone3(&cl_args);
@@ -88,9 +88,8 @@ Result future::get() {
             THROW("lseek()", errmsg());
         }
         if (pos == 0) {
-            THROW(
-                "supervisor died without an error message (si_code: ", si.si_code,
-                ", si_status: ", si.si_status, ')');
+            THROW("supervisor died without an error message (si_code: ", si.si_code,
+                    ", si_status: ", si.si_status, ')');
         }
         std::string msg(pos, '\0');
         if (pread_all(error_fd, 0, msg.data(), msg.size()) != msg.size()) {
@@ -99,9 +98,8 @@ Result future::get() {
         THROW(msg);
     }
     // Result
-    static_assert(
-        std::is_trivially_copyable_v<Result>,
-        "needed to memcpy() it through a file descriptor");
+    static_assert(std::is_trivially_copyable_v<Result>,
+            "needed to memcpy() it through a file descriptor");
     Result res{};
     if (pread_all(error_fd, 0, &res, sizeof(res)) != sizeof(res)) {
         if (errno == 0) {

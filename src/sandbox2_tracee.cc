@@ -49,8 +49,7 @@ struct Tracee {
 
     template <class... Args>
     void die_if_err(bool failed, const Args&... args) noexcept {
-        static_assert(
-            sizeof...(Args) > 0, "Description of the cause of an error is necessary");
+        static_assert(sizeof...(Args) > 0, "Description of the cause of an error is necessary");
         if (failed) {
             die(args..., errmsg());
         }
@@ -112,9 +111,8 @@ struct Tracee {
                 auto dest = concat("/proc/", StringView(abs_dest).without_leading('/'));
                 die_if_err(mkdir(dest) and errno != EEXIST, "mkdir(\"", dest, "\")");
                 int flags = MS_BIND | (mnt.recursive ? MS_REC : 0);
-                die_if_err(
-                    mount(mnt.source.data(), dest.to_cstr().data(), nullptr, flags, nullptr),
-                    "mount(bind: \"", mnt.source, "\" -> \"", dest.to_cstr(), "\")");
+                die_if_err(mount(mnt.source.data(), dest.to_cstr().data(), nullptr, flags, nullptr),
+                        "mount(bind: \"", mnt.source, "\" -> \"", dest.to_cstr(), "\")");
                 // Remount to set specified flags
                 flags |= MS_REMOUNT | MS_NOSUID;
                 if (mnt.read_only) {
@@ -123,9 +121,8 @@ struct Tracee {
                 if (mnt.no_exec) {
                     flags |= MS_NOEXEC;
                 }
-                die_if_err(
-                    mount(nullptr, dest.to_cstr().data(), nullptr, flags, nullptr),
-                    "mount(bind remount: \"", dest, "\")");
+                die_if_err(mount(nullptr, dest.to_cstr().data(), nullptr, flags, nullptr),
+                        "mount(bind remount: \"", dest, "\")");
             }
         } catch (...) {
             die("performing bind mounts", errmsg(ENOMEM));
@@ -142,7 +139,7 @@ struct Tracee {
                 auto path = path_absolute(mnt.source, cwd);
                 if (has_prefix(path, "/proc/") or path == "/proc") {
                     die("mount source: \"", mnt.source,
-                        R"(" uses "/proc/" that is forbidden to be used)");
+                            R"(" uses "/proc/" that is forbidden to be used)");
                 }
             }
 
@@ -158,26 +155,22 @@ struct Tracee {
             constexpr StringView prefix = "size=";
             auto fs_size_str = to_string(options.fs.size);
             return InplaceBuff<prefix.size() + decltype(fs_size_str)::max_size() + 1>{
-                std::in_place, prefix, fs_size_str}; // +1 for trailing null
+                    std::in_place, prefix, fs_size_str}; // +1 for trailing null
         }();
-        die_if_err(
-            mount(
-                "tmpfs", "/proc", "tmpfs", root_mount_flags, root_mount_data.to_cstr().data()),
-            "mount(tmpfs at \"/proc\")");
+        die_if_err(mount("tmpfs", "/proc", "tmpfs", root_mount_flags,
+                           root_mount_data.to_cstr().data()),
+                "mount(tmpfs at \"/proc\")");
         perform_bind_mounts();
         // Make the new root filesystem read only
         if (options.fs.read_only) {
-            die_if_err(
-                mount(
-                    nullptr, "/proc", nullptr, root_mount_flags | MS_REMOUNT | MS_RDONLY,
-                    root_mount_data.to_cstr().data()),
-                "mount(remounting tmpfs at \"/proc\")");
+            die_if_err(mount(nullptr, "/proc", nullptr, root_mount_flags | MS_REMOUNT | MS_RDONLY,
+                               root_mount_data.to_cstr().data()),
+                    "mount(remounting tmpfs at \"/proc\")");
         }
 
         // Make all mounts private
-        die_if_err(
-            mount(nullptr, "/", nullptr, MS_PRIVATE | MS_REC, nullptr),
-            "mount(recursive mk_private on \"/\")");
+        die_if_err(mount(nullptr, "/", nullptr, MS_PRIVATE | MS_REC, nullptr),
+                "mount(recursive mk_private on \"/\")");
 
         // Switch to the new root filesystem
         die_if_err(chdir("/proc/"), R"(chdir("/proc/"))");
@@ -247,11 +240,9 @@ struct Tracee {
     }
 
     [[noreturn]] void execute() noexcept {
-        die_if_err(
-            syscalls::execveat(
-                execfd, "", const_cast<char* const*>(argv_holder->data()), environ,
-                AT_EMPTY_PATH),
-            "execveat()");
+        die_if_err(syscalls::execveat(execfd, "", const_cast<char* const*>(argv_holder->data()),
+                           environ, AT_EMPTY_PATH),
+                "execveat()");
         __builtin_unreachable();
     }
 
@@ -290,16 +281,15 @@ struct Tracee {
 
 namespace sandbox::tracee {
 
-void execute(
-    const Options& options, FileDescriptor error_fd, Pipe sync_pipe,
-    FileDescriptor ptrace_sync_fd, uid_t supervisor_euid, gid_t supervisor_egid) noexcept {
+void execute(const Options& options, FileDescriptor error_fd, Pipe sync_pipe,
+        FileDescriptor ptrace_sync_fd, uid_t supervisor_euid, gid_t supervisor_egid) noexcept {
     // TODO: ignore SIGTTIN, SIGTTOU
     Tracee tra = {
-        .options = options,
-        .supervisor_euid = supervisor_euid,
-        .supervisor_egid = supervisor_egid,
-        .error_fd = std::move(error_fd),
-        .ptrace_sync_fd = std::move(ptrace_sync_fd),
+            .options = options,
+            .supervisor_euid = supervisor_euid,
+            .supervisor_egid = supervisor_egid,
+            .error_fd = std::move(error_fd),
+            .ptrace_sync_fd = std::move(ptrace_sync_fd),
     };
     tra.initialize(std::move(sync_pipe));
     tra.setup_user_namespace();

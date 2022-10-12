@@ -52,7 +52,7 @@ struct Options {
 
     struct FsOptions {
         size_t size = 1 << 20; // in bytes, will be rounded up to entire pages
-        bool read_only = true; // make the mount read-only
+        bool read_only = true; // make the root mount read-only
         bool no_exec = true; // do not allow executing programs from this mount
         std::vector<BindMount> mounts;
     } fs;

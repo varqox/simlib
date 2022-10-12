@@ -115,12 +115,10 @@ struct Supervisor {
 
     [[nodiscard]] auto waitid_tracee_init() noexcept {
         assert(is_one_of(tracee_init.state, TraceeInit::KILLABLE, TraceeInit::UNWAITED));
-        auto res =
-            syscalls::waitid(P_PIDFD, tracee_init.pidfd, &tracee_init.si, WEXITED, nullptr);
-        debuglog.verbose(
-            "waitid(tracee_init, {pid: ", tracee_init.si.si_pid,
-            ", signo: ", tracee_init.si.si_signo, ", code: ", tracee_init.si.si_code,
-            ", status: ", tracee_init.si.si_status, "})");
+        auto res = syscalls::waitid(P_PIDFD, tracee_init.pidfd, &tracee_init.si, WEXITED, nullptr);
+        debuglog.verbose("waitid(tracee_init, {pid: ", tracee_init.si.si_pid,
+                ", signo: ", tracee_init.si.si_signo, ", code: ", tracee_init.si.si_code,
+                ", status: ", tracee_init.si.si_status, "})");
         tracee_init.state = TraceeInit::WAITED;
         return res;
     }
@@ -137,12 +135,10 @@ struct Supervisor {
             }
             _exit(42);
         };
-        if (tracee_init.state == TraceeInit::KILLABLE and kill_tracee_init() and
-            errno != ESRCH) {
+        if (tracee_init.state == TraceeInit::KILLABLE and kill_tracee_init() and errno != ESRCH) {
             // ESRCH may appear if the process has already died
-            die_impl(
-                "pidfd_send_signal(tracee_init, KILL)", errmsg(), " (after error: ", args...,
-                ")");
+            die_impl("pidfd_send_signal(tracee_init, KILL)", errmsg(), " (after error: ", args...,
+                    ")");
             __builtin_unreachable();
         }
         if (tracee_init.state == TraceeInit::UNWAITED and waitid_tracee_init()) {
@@ -155,8 +151,7 @@ struct Supervisor {
 
     template <class... Args>
     void die_if_err(bool failed, const Args&... args) noexcept {
-        static_assert(
-            sizeof...(Args) > 0, "Description of the cause of the error is necessary");
+        static_assert(sizeof...(Args) > 0, "Description of the cause of the error is necessary");
         if (failed) {
             die(args..., errmsg());
         }
@@ -214,17 +209,16 @@ struct Supervisor {
 
         int child_pidfd{};
         clone_args cl_args = {
-            .flags = CLONE_PIDFD | CLONE_NEWUSER | CLONE_NEWNS | CLONE_NEWPID,
-            .pidfd = reinterpret_cast<uintptr_t>(&child_pidfd),
-            .exit_signal = SIGCHLD,
+                .flags = CLONE_PIDFD | CLONE_NEWUSER | CLONE_NEWNS | CLONE_NEWPID,
+                .pidfd = reinterpret_cast<uintptr_t>(&child_pidfd),
+                .exit_signal = SIGCHLD,
         };
         tracee_init.pid = syscalls::clone3(&cl_args);
         die_if_err(tracee_init.pid == -1, "clone3()");
         if (tracee_init.pid == 0) {
             // Child process
-            sandbox::tracee::execute(
-                options, std::move(error_fd), std::move(sync_pipe),
-                std::move(tracee_init.ptrace_sync_fd), supervisor_euid, supervisor_egid);
+            sandbox::tracee::execute(options, std::move(error_fd), std::move(sync_pipe),
+                    std::move(tracee_init.ptrace_sync_fd), supervisor_euid, supervisor_egid);
             __builtin_unreachable();
         }
         // Parent process
@@ -247,15 +241,15 @@ struct Supervisor {
     }
 
     void start_ptrace() noexcept {
-        if (ptrace(
-                PTRACE_SEIZE, tracee_init.pid, nullptr,
-                PTRACE_O_EXITKILL | PTRACE_O_TRACECLONE | PTRACE_O_TRACEEXEC |
-                    PTRACE_O_TRACEEXIT | PTRACE_O_TRACEFORK | PTRACE_O_TRACEVFORK |
-                    PTRACE_O_TRACESYSGOOD | PTRACE_O_TRACEVFORKDONE | PTRACE_O_TRACESECCOMP))
+        if (ptrace(PTRACE_SEIZE, tracee_init.pid, nullptr,
+                    PTRACE_O_EXITKILL | PTRACE_O_TRACECLONE | PTRACE_O_TRACEEXEC |
+                            PTRACE_O_TRACEEXIT | PTRACE_O_TRACEFORK | PTRACE_O_TRACEVFORK |
+                            PTRACE_O_TRACESYSGOOD | PTRACE_O_TRACEVFORKDONE |
+                            PTRACE_O_TRACESECCOMP))
         {
             int ptrace_errnum = errno;
             die_if_err(
-                kill_tracee_init() and errno != ESRCH, "pidfd_send_signal(tracee_init, KILL)");
+                    kill_tracee_init() and errno != ESRCH, "pidfd_send_signal(tracee_init, KILL)");
             die_if_err(waitid_tracee_init(), "waitid(tracee_init)");
             die_on_tracee_error(); // error in tracee_init may have caused the ptrace() error
                                    // e.g. by making the tracee_init exit before ptrace() call
@@ -264,8 +258,7 @@ struct Supervisor {
         // Signal tracee_init that it became traced
         eventfd_t x = 1;
         die_if_err(eventfd_write(tracee_init.ptrace_sync_fd, x), "eventfd_write(ptrace_sync)");
-        die_if_err(
-            tracee_init.ptrace_sync_fd.close(), "close()"); // fd is not needed from now on
+        die_if_err(tracee_init.ptrace_sync_fd.close(), "close()"); // fd is not needed from now on
     }
 
     void construct_tracees_holder() noexcept {
@@ -285,37 +278,36 @@ struct Supervisor {
 
     pid_t get_tgid(int proc_status_fd, pid_t tid) noexcept {
         return die_on_exception(
-            [&] {
-                auto str = field_from_proc_status(proc_status_fd, "Tgid");
-                auto tgid_opt = str2num<pid_t>(str);
-                die_if_err(
-                    not tgid_opt, "/proc/", to_string(tid),
-                    "/status field Tgid has value that is not a number: ", str);
-                return *tgid_opt;
-            },
-            "field_from_proc_status()");
+                [&] {
+                    auto str = field_from_proc_status(proc_status_fd, "Tgid");
+                    auto tgid_opt = str2num<pid_t>(str);
+                    die_if_err(not tgid_opt, "/proc/", to_string(tid),
+                            "/status field Tgid has value that is not a number: ", str);
+                    return *tgid_opt;
+                },
+                "field_from_proc_status()");
     }
 
     // Creates tracee info unless it existed and returns reference to it
     TraceeInfo& tracee_info(pid_t tid) noexcept {
         return die_on_exception(
-            [&]() -> TraceeInfo& {
-                auto [it, created] = tracees_holder->try_emplace(tid);
-                if (not created) {
+                [&]() -> TraceeInfo& {
+                    auto [it, created] = tracees_holder->try_emplace(tid);
+                    if (not created) {
+                        return it->second;
+                    }
+                    // Just created
+                    FileDescriptor proc_status = get_proc_status_fd(tid);
+                    pid_t tgid = get_tgid(proc_status, tid);
+                    it->second = {
+                            .tgid = tgid,
+                            .proc_status = std::move(proc_status),
+                    };
+                    debuglog("    add tracee [", tid, "], TGID: ", tgid);
+                    // TODO: update VM information
                     return it->second;
-                }
-                // Just created
-                FileDescriptor proc_status = get_proc_status_fd(tid);
-                pid_t tgid = get_tgid(proc_status, tid);
-                it->second = {
-                    .tgid = tgid,
-                    .proc_status = std::move(proc_status),
-                };
-                debuglog("    add tracee [", tid, "], TGID: ", tgid);
-                // TODO: update VM information
-                return it->second;
-            },
-            "map::try_emplace()");
+                },
+                "map::try_emplace()");
     }
 
     static const char* sig_name(int sig) noexcept {
@@ -396,9 +388,9 @@ struct Supervisor {
     RestartTracee process_ptrace_event_exit(siginfo_t& si) noexcept {
         debuglog("[", si.si_pid, "] EXIT");
         (void)tracee_info(
-            si.si_pid); // may create a record for the new tracee e.g. when new process gets
-                        // SIGKILLed before we receive PTRACE_EVENT_STOP and kernel generates
-                        // PTRACE_EVENT_EXIT before killing the tracee
+                si.si_pid); // may create a record for the new tracee e.g. when new process gets
+                            // SIGKILLed before we receive PTRACE_EVENT_STOP and kernel generates
+                            // PTRACE_EVENT_EXIT before killing the tracee
         // TODO: update VM information
         return {PTRACE_CONT, 0};
     }
@@ -410,8 +402,7 @@ struct Supervisor {
         return {PTRACE_CONT, 0};
     }
 
-    static RestartTracee
-    process_ptrace_event_stop_group_stop(siginfo_t& si, int sig) noexcept {
+    static RestartTracee process_ptrace_event_stop_group_stop(siginfo_t& si, int sig) noexcept {
         debuglog("[", si.si_pid, "] STOP: group-stop by signal ", sig_name(sig));
         (void)system(concat_tostr("cat /proc/", si.si_pid, "/status").data());
         (void)system(concat_tostr("cat /proc/", si.si_pid, "/stat").data());
@@ -496,15 +487,13 @@ struct Supervisor {
             return process_ptrace_signal_delivery_stop(si);
         }
         }
-        die("unknown siginfo_t::si_status for si_code == CLD_TRAPPED: ",
-            to_string(si.si_status));
+        die("unknown siginfo_t::si_status for si_code == CLD_TRAPPED: ", to_string(si.si_status));
     }
 
     void process_event(siginfo_t& si) noexcept {
         auto debuglog_intercepted_signal = [&](StringView description) {
-            debuglog(
-                "[", si.si_pid, "] ", description, " by signal ", sig_name(si.si_status),
-                ", nothing to do");
+            debuglog("[", si.si_pid, "] ", description, " by signal ", sig_name(si.si_status),
+                    ", nothing to do");
         };
 
         switch (si.si_code) {
@@ -519,8 +508,7 @@ struct Supervisor {
             }
             // Non-init tracee
             die_if_err(
-                syscalls::waitid(P_PID, si.si_pid, &si, __WALL | WEXITED, nullptr),
-                "waitid()");
+                    syscalls::waitid(P_PID, si.si_pid, &si, __WALL | WEXITED, nullptr), "waitid()");
             if (si.si_pid == main_tracee.pid) {
                 assert(main_tracee.state == MainTracee::UNWAITED);
                 main_tracee.state = MainTracee::WAITED;
@@ -537,8 +525,7 @@ struct Supervisor {
             if (not restart_cmd) {
                 return; // Nothing to do
             }
-            assert(
-                is_one_of(restart_cmd->ptrace_op, PTRACE_CONT, PTRACE_LISTEN, PTRACE_SYSCALL));
+            assert(is_one_of(restart_cmd->ptrace_op, PTRACE_CONT, PTRACE_LISTEN, PTRACE_SYSCALL));
             auto cmd_str = [&] {
                 switch (restart_cmd->ptrace_op) {
                 case PTRACE_CONT: return "CONT";
@@ -560,22 +547,21 @@ struct Supervisor {
         construct_tracees_holder();
         debuglog("add tracee_init [", tracee_init.pid, "]");
         die_on_exception(
-            [&] {
-                auto [_, inserted] = tracees_holder->try_emplace(
-                    tracee_init.pid,
-                    TraceeInfo{
-                        .tgid = tracee_init.pid,
-                        .proc_status =
-                            FileDescriptor{}, // do not include tracee_init in statistics
-                    });
-                assert(inserted);
-            },
-            "map::try_emplace()");
+                [&] {
+                    auto [_, inserted] = tracees_holder->try_emplace(tracee_init.pid,
+                            TraceeInfo{
+                                    .tgid = tracee_init.pid,
+                                    .proc_status = FileDescriptor{}, // do not include tracee_init
+                                                                     // in statistics
+                            });
+                    assert(inserted);
+                },
+                "map::try_emplace()");
         for (;;) {
             siginfo_t si;
             // Wait for events
             auto rc = syscalls::waitid(
-                P_ALL, 0, &si, __WALL | WEXITED | WSTOPPED | WCONTINUED | WNOWAIT, nullptr);
+                    P_ALL, 0, &si, __WALL | WEXITED | WSTOPPED | WCONTINUED | WNOWAIT, nullptr);
             if (rc == -1 and errno == ECHILD) {
                 // This way is safer than looping until tracees_holder->empty() because it may
                 // happen that we see process death before we get an event from its
@@ -585,9 +571,8 @@ struct Supervisor {
                 break;
             }
             die_if_err(rc, "waitid()");
-            debuglog.verbose(
-                "waitid({pid: ", si.si_pid, ", signo: ", si.si_signo, ", code: ", si.si_code,
-                ", status: ", si.si_status, "})");
+            debuglog.verbose("waitid({pid: ", si.si_pid, ", signo: ", si.si_signo,
+                    ", code: ", si.si_code, ", status: ", si.si_status, "})");
             process_event(si);
         }
         assert(tracees_holder->empty());
@@ -602,23 +587,22 @@ struct Supervisor {
         if (main_tracee.state == MainTracee::NOT_STARTED) {
             // main_tracee did not spawn
             die("tracee_init died without an error message (si_code: ",
-                to_string(tracee_init.si.si_code),
-                ", si_status: ", to_string(tracee_init.si.si_status), ")");
+                    to_string(tracee_init.si.si_code),
+                    ", si_status: ", to_string(tracee_init.si.si_status), ")");
         }
         // main_tracee was executed and no error was encountered along the way
         sandbox::Result res = {
-            .si =
-                {
-                    .code = main_tracee.si.si_code,
-                    .status = main_tracee.si.si_status,
-                },
-            .runtime = 0ns, // TODO: TODO
-            .cpu_runtime = total_cpu_time,
-            .vm_peak = total_vm_peak,
+                .si =
+                        {
+                                .code = main_tracee.si.si_code,
+                                .status = main_tracee.si.si_status,
+                        },
+                .runtime = 0ns, // TODO: TODO
+                .cpu_runtime = total_cpu_time,
+                .vm_peak = total_vm_peak,
         };
-        (void)write_all(
-            error_fd, &res,
-            sizeof(res)); // if it fails, we detect it in the parent
+        (void)write_all(error_fd, &res,
+                sizeof(res)); // if it fails, we detect it in the parent
         _exit(0);
     }
 };
