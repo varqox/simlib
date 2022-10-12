@@ -93,7 +93,7 @@ Result future::get() {
         }
         std::string msg(pos, '\0');
         if (pread_all(error_fd, 0, msg.data(), msg.size()) != msg.size()) {
-            THROW("read()", errmsg());
+            THROW("pread()", errmsg());
         }
         THROW(msg);
     }

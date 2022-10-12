@@ -8,6 +8,7 @@
 #include "simlib/sandbox2.hh"
 #include "simlib/string_traits.hh"
 #include "simlib/syscalls.hh"
+#include "simlib/to_string.hh"
 #include "simlib/working_directory.hh"
 
 #include <csignal>
@@ -19,6 +20,7 @@
 #include <sys/eventfd.h>
 #include <sys/mount.h>
 #include <sys/prctl.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 namespace {
@@ -84,12 +86,13 @@ struct Tracee {
     }
 
     template <class T>
-    void write_id_mapping(CStringView file_path, T id) noexcept {
-        auto id_str = to_string(id);
-        constexpr StringView pref = "1000 ";
-        constexpr StringView suff = " 1";
-        InplaceBuff<pref.size() + decltype(id_str)::max_size() + suff.size()> str{
-            std::in_place, pref, id_str, suff};
+    void write_id_mapping(CStringView file_path, T parent_user_namespace_uid) noexcept {
+        auto id_str = to_string(parent_user_namespace_uid);
+        constexpr auto this_user_namespace_uid = to_string(1000);
+        constexpr auto uid_range_length = to_string(1);
+        InplaceBuff<this_user_namespace_uid.size() + 1 + decltype(id_str)::max_size() + 1 +
+                uid_range_length.size()>
+                str{std::in_place, this_user_namespace_uid, ' ', id_str, ' ', uid_range_length};
         write_proc_file(file_path, str);
     }
 
@@ -132,6 +135,7 @@ struct Tracee {
     void setup_fs() noexcept {
         die_if_err(mount(nullptr, "/", nullptr, MS_PRIVATE, nullptr), "mount(mk_private:/)");
         // /proc/ is insecure to use (as a bind mount) and we will use it as a new root
+        // TODO: why /proc/ is insecure to use???
         try {
             // TODO: what if source is a symlink???
             auto cwd = get_cwd().to_string();

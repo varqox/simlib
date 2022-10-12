@@ -34,6 +34,8 @@
 using std::chrono_literals::operator""ns;
 using std::optional;
 
+// TODO: rename kill_* to send_sig_*
+
 namespace {
 
 constexpr DebugLogger<true, true> debuglog{};
@@ -191,6 +193,7 @@ struct Supervisor {
         die_if_err(sync_pipe.readable.close(), "close(sync_pipe.readable)");
     }
 
+    // TODO: comment about what state tracee is in after this function return
     void run_tracee_init(const sandbox::Options& options) noexcept {
         const auto supervisor_euid = geteuid();
         const auto supervisor_egid = getegid();
@@ -207,6 +210,7 @@ struct Supervisor {
             return std::move(*pipe_opt);
         }();
 
+        // TODO: use CLONE_INTO_CGROUP
         int child_pidfd{};
         clone_args cl_args = {
                 .flags = CLONE_PIDFD | CLONE_NEWUSER | CLONE_NEWNS | CLONE_NEWPID,
@@ -530,7 +534,7 @@ struct Supervisor {
                 switch (restart_cmd->ptrace_op) {
                 case PTRACE_CONT: return "CONT";
                 case PTRACE_LISTEN: return "LISTEN";
-                case PTRACE_SYSCALL: return "SYSCALL";
+                case PTRACE_SYSCALL: return "SYSCALL"; // TODO: this may be unneeded
                 default: return "?";
                 }
             };
