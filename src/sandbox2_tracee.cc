@@ -184,6 +184,7 @@ struct Tracee {
 
     void drop_capabilities() noexcept {
         // Set and lock securebits while we have capabilities
+        // TODO: dropping capabilities now, allows unprivileged processes to access /proc/1/*
         die_if_err(
             cap_set_secbits(
                 SECBIT_NOROOT_LOCKED | SECBIT_NOROOT | SECBIT_NO_CAP_AMBIENT_RAISE |
@@ -298,7 +299,7 @@ void execute(const Options& options, FileDescriptor error_fd, Pipe sync_pipe,
     tra.initialize(std::move(sync_pipe));
     tra.setup_user_namespace();
     tra.prepare_executable();
-    // tra.setup_fs();
+    tra.setup_fs();
     tra.drop_capabilities();
     tra.wait_for_ptrace();
     tra.spawn_main_tracee();

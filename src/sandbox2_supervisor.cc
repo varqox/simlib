@@ -570,8 +570,10 @@ struct Supervisor {
                 // This way is safer than looping until tracees_holder->empty() because it may
                 // happen that we see process death before we get an event from its
                 // just-created child. E.g. int main() { _exit(fork() != 0); } We could
-                // sometimes see: [123] CREATED -- parent [123] DIED -- parent [124] CREATED --
-                // this is the event from the new child process
+                // sometimes see:
+                //   [123] CREATED -- parent
+                //   [123] DIED -- parent
+                //   [124] CREATED -- this is the event from the new child process
                 break;
             }
             die_if_err(rc, "waitid()");
