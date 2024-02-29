@@ -1,3 +1,5 @@
+# Repository moved to monorepo: https://github.com/varqox/sim-project
+
 # simlib [![Build Status](https://travis-ci.org/varqox/simlib.svg?branch=master)](https://travis-ci.org/varqox/simlib)
 
 simlib is a C++ utility library for Linux originally created for the [sim project](https://github.com/varqox/sim).
